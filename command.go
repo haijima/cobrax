@@ -101,11 +101,12 @@ func (c *Command) ExecuteContext(ctx context.Context) error {
 	c.WalkCommands(func(cmd *Command) {
 		cmd.delegateRunFuncs()
 		if c.AutomaticBindViper {
-			cmd.BindFlags()
+			_ = cmd.BindFlags()
 		}
 	})
 	c.useDebugLogging()
 	c.useConfigFile()
+	c.useEnv()
 	return c.Command.ExecuteContext(ctx)
 }
 
@@ -114,11 +115,12 @@ func (c *Command) Execute() error {
 	c.WalkCommands(func(cmd *Command) {
 		cmd.delegateRunFuncs()
 		if c.AutomaticBindViper {
-			cmd.BindFlags()
+			_ = cmd.BindFlags()
 		}
 	})
 	c.useDebugLogging()
 	c.useConfigFile()
+	c.useEnv()
 	return c.Command.Execute()
 }
 
@@ -127,11 +129,12 @@ func (c *Command) ExecuteContextC(ctx context.Context) (*cobra.Command, error) {
 	c.WalkCommands(func(cmd *Command) {
 		cmd.delegateRunFuncs()
 		if c.AutomaticBindViper {
-			cmd.BindFlags()
+			_ = cmd.BindFlags()
 		}
 	})
 	c.useDebugLogging()
 	c.useConfigFile()
+	c.useEnv()
 	return c.Command.ExecuteContextC(ctx)
 }
 
@@ -140,11 +143,12 @@ func (c *Command) ExecuteC() (cmd *cobra.Command, err error) {
 	c.WalkCommands(func(cmd *Command) {
 		cmd.delegateRunFuncs()
 		if c.AutomaticBindViper {
-			cmd.BindFlags()
+			_ = cmd.BindFlags()
 		}
 	})
 	c.useDebugLogging()
 	c.useConfigFile()
+	c.useEnv()
 	return c.Command.ExecuteC()
 }
 
@@ -209,8 +213,8 @@ func (c *Command) useDebugLogging() {
 	c.PersistentFlags().Bool("debug", false, "debug level output")
 	c.PersistentFlags().BoolP("verbose", "v", false, "verbose level output")
 	c.MarkFlagsMutuallyExclusive("debug", "verbose")
-	c.BindPersistentFlag("debug")
-	c.BindPersistentFlag("verbose")
+	_ = c.BindPersistentFlag("debug")
+	_ = c.BindPersistentFlag("verbose")
 
 	logger := zap.NewNop()
 	var restoreGlobal func()
