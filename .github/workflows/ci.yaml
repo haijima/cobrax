@@ -1,0 +1,35 @@
+name: CI
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - main
+      - develop
+  pull_request:
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+      - name: get dependencies
+        run: go get -v -t -d ./...
+      - name: testing
+        run: go test -shuffle on ./...
