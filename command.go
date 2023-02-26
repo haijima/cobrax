@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -263,9 +264,16 @@ func (c *Command) useConfigFile() {
 			wd, err := os.Getwd()
 			cobra.CheckErr(err)
 			c.viper.AddConfigPath(wd) // adding current working directory as first search path
+			xdgConfig := os.Getenv("XDG_CONFIG_HOME")
+			if xdgConfig == "" {
+				home, err := os.UserHomeDir()
+				cobra.CheckErr(err)
+				xdgConfig = filepath.Join(home, ".config")
+			}
+			c.viper.AddConfigPath(filepath.Join(xdgConfig, rootCmd.Name())) // adding XDG config directory as second search path
 			home, err := os.UserHomeDir()
 			cobra.CheckErr(err)
-			c.viper.AddConfigPath(home) // adding home directory as second search path
+			c.viper.AddConfigPath(home) // adding home directory as third search path
 			c.viper.SetConfigName("." + rootCmd.Name())
 		}
 
