@@ -54,16 +54,16 @@ type Command struct {
 }
 
 // NewCommand creates a new Command.
-func NewCommand() *Command {
-	return Wrap(&cobra.Command{})
+func NewCommand(v *viper.Viper, fs afero.Fs) *Command {
+	return Wrap(&cobra.Command{}, v, fs)
 }
 
 // Wrap creates a new Command from a cobra.Command.
-func Wrap(cmd *cobra.Command) *Command {
+func Wrap(cmd *cobra.Command, v *viper.Viper, fs afero.Fs) *Command {
 	cmd.CompletionOptions.HiddenDefaultCmd = true
 	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	cmd.SilenceUsage = true // don't show help content when error occurred
-	c := &Command{Command: cmd, viper: viper.New(), fs: afero.NewOsFs()}
+	c := &Command{Command: cmd, viper: v, fs: fs}
 	c.UseDebugLogging = true
 	c.UseConfigFile = true
 	c.UseEnv = true
@@ -71,28 +71,8 @@ func Wrap(cmd *cobra.Command) *Command {
 	return c
 }
 
-// SetFs sets the afero.Fs filesystem for the command.
-func (c *Command) SetFs(fs afero.Fs) {
-	c.fs = fs
-	if c.viper != nil {
-		c.viper.SetFs(fs)
-	}
-}
-
 // Fs returns the afero.Fs filesystem.
 func (c *Command) Fs() afero.Fs { return c.fs }
-
-// SetViper sets the viper.Viper instance for the command.
-func (c *Command) SetViper(v *viper.Viper) {
-	for _, key := range c.viper.AllKeys() {
-		v.Set(key, c.viper.Get(key))
-	}
-
-	c.viper = v
-	if c.fs != nil {
-		c.viper.SetFs(c.fs)
-	}
-}
 
 // Viper returns the viper.Viper instance.
 func (c *Command) Viper() *viper.Viper { return c.viper }
@@ -316,8 +296,6 @@ func (c *Command) Commands() []*Command {
 // AddCommand adds a command to the command.
 func (c *Command) AddCommand(commands ...*Command) {
 	for _, cmd := range commands {
-		cmd.SetViper(c.viper)
-		cmd.SetFs(c.fs)
 		c.Command.AddCommand(cmd.Command)
 		c.commands = append(c.commands, cmd)
 		c.commandsAreSorted = false

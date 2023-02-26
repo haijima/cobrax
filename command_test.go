@@ -14,64 +14,49 @@ import (
 )
 
 func TestNewCommand(t *testing.T) {
-	cmd := cobrax.NewCommand()
+	cmd := cobrax.NewCommand(viper.New(), afero.NewMemMapFs())
 	cmd.Use = "test"
 
 	assert.NotNil(t, cmd)
 	assert.NotNil(t, cmd.Command)
-	assert.NotNil(t, cmd.Viper())
-	assert.Equal(t, afero.NewOsFs(), cmd.Fs())
 	assert.Equal(t, "test", cmd.Name())
 }
 
 func TestWrap(t *testing.T) {
 	cmd := cobrax.Wrap(&cobra.Command{
 		Use: "test",
-	})
+	}, viper.New(), afero.NewMemMapFs())
 
 	assert.NotNil(t, cmd)
 	assert.NotNil(t, cmd.Command)
-	assert.NotNil(t, cmd.Viper())
-	assert.Equal(t, afero.NewOsFs(), cmd.Fs())
 	assert.Equal(t, "test", cmd.Name())
 }
 
 // TestCommand_Viper tests the Viper() and SetViper().
 func TestCommand_Viper(t *testing.T) {
 	v := viper.New()
-	cmd := cobrax.NewCommand()
-	cmd.SetViper(v)
+	cmd := cobrax.NewCommand(v, afero.NewMemMapFs())
 
 	assert.Exactly(t, v, cmd.Viper())
-
-	cmd.Flags().String("foo", "bar", "foo")
-	_ = cmd.BindFlags()
-
-	// set viper after a flag was bound.
-	v2 := viper.New()
-	cmd.SetViper(v2)
-
-	assert.Exactly(t, v2, cmd.Viper())
-	assert.Equal(t, "bar", cmd.Viper().GetString("foo"))
 }
 
 // TestCommand_Fs tests the Fs() and SetFs().
 func TestCommand_Fs(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	cmd := cobrax.NewCommand()
-	cmd.SetFs(fs)
+	cmd := cobrax.NewCommand(viper.New(), fs)
 
 	assert.Exactly(t, fs, cmd.Fs())
 }
 
 // TestCommand_SubCommand tests AddCommand() and Commands()
 func TestCommand_SubCommand(t *testing.T) {
-	root := cobrax.NewCommand()
+	v := viper.New()
+	fs := afero.NewMemMapFs()
+	root := cobrax.NewCommand(v, fs)
 	root.Use = "root"
-
-	foo := cobrax.NewCommand()
+	foo := cobrax.NewCommand(v, fs)
 	foo.Use = "foo"
-	bar := cobrax.NewCommand()
+	bar := cobrax.NewCommand(v, fs)
 	bar.Use = "bar"
 
 	root.AddCommand(foo, bar)
@@ -85,12 +70,13 @@ func TestCommand_SubCommand(t *testing.T) {
 }
 
 func TestCommand_RemoveCommand(t *testing.T) {
-	root := cobrax.NewCommand()
+	v := viper.New()
+	fs := afero.NewMemMapFs()
+	root := cobrax.NewCommand(v, fs)
 	root.Use = "root"
-
-	foo := cobrax.NewCommand()
+	foo := cobrax.NewCommand(v, fs)
 	foo.Use = "foo"
-	bar := cobrax.NewCommand()
+	bar := cobrax.NewCommand(v, fs)
 	bar.Use = "bar"
 
 	root.AddCommand(foo, bar)
@@ -103,17 +89,19 @@ func TestCommand_RemoveCommand(t *testing.T) {
 }
 
 func TestCommand_ResetCommands(t *testing.T) {
-	one := cobrax.NewCommand()
+	v := viper.New()
+	fs := afero.NewMemMapFs()
+	one := cobrax.NewCommand(v, fs)
 	one.Use = "one"
-	two := cobrax.NewCommand()
+	two := cobrax.NewCommand(v, fs)
 	two.Use = "two"
-	three := cobrax.NewCommand()
+	three := cobrax.NewCommand(v, fs)
 	three.Use = "three"
-	four1 := cobrax.NewCommand()
+	four1 := cobrax.NewCommand(v, fs)
 	four1.Use = "four1"
-	four2 := cobrax.NewCommand()
+	four2 := cobrax.NewCommand(v, fs)
 	four2.Use = "four2"
-	five := cobrax.NewCommand()
+	five := cobrax.NewCommand(v, fs)
 	five.Use = "five"
 
 	one.AddCommand(two)
@@ -135,11 +123,13 @@ func TestCommand_ResetCommands(t *testing.T) {
 }
 
 func TestCommand_Root(t *testing.T) {
-	root := cobrax.NewCommand()
+	v := viper.New()
+	fs := afero.NewMemMapFs()
+	root := cobrax.NewCommand(v, fs)
 	root.Use = "root"
-	child := cobrax.NewCommand()
+	child := cobrax.NewCommand(v, fs)
 	child.Use = "child"
-	grandChild := cobrax.NewCommand()
+	grandChild := cobrax.NewCommand(v, fs)
 	grandChild.Use = "grandChild"
 
 	child.AddCommand(grandChild)
@@ -149,17 +139,19 @@ func TestCommand_Root(t *testing.T) {
 }
 
 func TestCommand_WalkCommands(t *testing.T) {
-	root := cobrax.NewCommand()
+	v := viper.New()
+	fs := afero.NewMemMapFs()
+	root := cobrax.NewCommand(v, fs)
 	root.Use = "root"
-	foo := cobrax.NewCommand()
+	foo := cobrax.NewCommand(v, fs)
 	foo.Use = "foo"
-	bar := cobrax.NewCommand()
+	bar := cobrax.NewCommand(v, fs)
 	bar.Use = "bar"
-	baz := cobrax.NewCommand()
+	baz := cobrax.NewCommand(v, fs)
 	baz.Use = "baz"
-	buzz := cobrax.NewCommand()
+	buzz := cobrax.NewCommand(v, fs)
 	buzz.Use = "buzz"
-	qux := cobrax.NewCommand()
+	qux := cobrax.NewCommand(v, fs)
 	qux.Use = "qux"
 
 	root.AddCommand(foo, bar)
@@ -175,7 +167,7 @@ func TestCommand_WalkCommands(t *testing.T) {
 	assert.Equal(t, []string{"root", "bar", "buzz", "qux", "foo", "baz"}, names)
 }
 func TestCommand_Execute(t *testing.T) {
-	cmd := cobrax.NewCommand()
+	cmd := cobrax.NewCommand(viper.New(), afero.NewMemMapFs())
 	cmd.Use = "test"
 	cmd.Run = func(cmd *cobrax.Command, args []string) {
 		cmd.PrintOut("test")
@@ -190,7 +182,7 @@ func TestCommand_Execute(t *testing.T) {
 }
 
 func TestCommand_ExecuteC(t *testing.T) {
-	cmd := cobrax.NewCommand()
+	cmd := cobrax.NewCommand(viper.New(), afero.NewMemMapFs())
 	cmd.Use = "test"
 	cmd.Run = func(cmd *cobrax.Command, args []string) {
 		cmd.PrintOut("test")
@@ -206,7 +198,7 @@ func TestCommand_ExecuteC(t *testing.T) {
 }
 
 func TestCommand_ExecuteContext(t *testing.T) {
-	cmd := cobrax.NewCommand()
+	cmd := cobrax.NewCommand(viper.New(), afero.NewMemMapFs())
 	cmd.Use = "test"
 	cmd.Run = func(cmd *cobrax.Command, args []string) {
 		cmd.PrintOut("test")
@@ -221,7 +213,7 @@ func TestCommand_ExecuteContext(t *testing.T) {
 }
 
 func TestCommand_ExecuteContextC(t *testing.T) {
-	cmd := cobrax.NewCommand()
+	cmd := cobrax.NewCommand(viper.New(), afero.NewMemMapFs())
 	cmd.Use = "test"
 	cmd.Run = func(cmd *cobrax.Command, args []string) {
 		cmd.PrintOut("test")
@@ -237,7 +229,7 @@ func TestCommand_ExecuteContextC(t *testing.T) {
 }
 
 func TestCommand_PrintOut(t *testing.T) {
-	cmd := cobrax.NewCommand()
+	cmd := cobrax.NewCommand(viper.New(), afero.NewMemMapFs())
 	cmd.Use = "test"
 	out := new(bytes.Buffer)
 	cmd.SetOut(out)
@@ -252,10 +244,8 @@ func TestCommand_PrintOut(t *testing.T) {
 func TestCommand_ReadFileOrStdIn(t *testing.T) {
 	v := viper.New()
 	fs := afero.NewMemMapFs()
-	cmd := cobrax.NewCommand()
+	cmd := cobrax.NewCommand(v, fs)
 	cmd.Use = "test"
-	cmd.SetViper(v)
-	cmd.SetFs(fs)
 	cmd.PersistentFlags().String("file", "", "file to read")
 	_ = cmd.BindPersistentFlags()
 
@@ -287,15 +277,14 @@ func TestCommand_ReadFileOrStdIn(t *testing.T) {
 	assert.Equal(t, []byte("bar"), content)
 }
 
-func TestCommand_BindEnv(t *testing.T) {
-}
-
 func setupFlags(t *testing.T) *cobrax.Command {
 	t.Helper()
 
-	parent := cobrax.NewCommand()
+	v := viper.New()
+	fs := afero.NewMemMapFs()
+	parent := cobrax.NewCommand(v, fs)
 	parent.Use = "parent"
-	child := cobrax.NewCommand()
+	child := cobrax.NewCommand(v, fs)
 	child.Use = "child"
 	parent.AddCommand(child)
 
