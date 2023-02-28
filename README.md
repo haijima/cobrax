@@ -9,6 +9,29 @@ A thin wrapper around library [spf13/cobra](http://github.com/spf13/cobra) that 
 ## Usage
 
 ```go
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/haijima/cobrax"
+	"github.com/spf13/afero"
+	"github.com/spf13/viper"
+)
+
+func main() {
+	rootCmd := cobrax.NewCommand(viper.New(), afero.NewOsFs())
+	rootCmd.Use = "test-cli"
+	rootCmd.Short = "cobrax sample CLI"
+	rootCmd.Run = func(cmd *cobrax.Command, args []string) {
+		fmt.Println("test-cli called")
+	}
+
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
+}
 ```
 
 ## Installation
