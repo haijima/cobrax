@@ -4,17 +4,15 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 // Command is a wrapper around cobra.Command that adds some additional functionality.
@@ -25,6 +23,9 @@ type Command struct {
 	parent            *Command
 	commands          []*Command
 	commandsAreSorted bool
+
+	D *log.Logger
+	V *log.Logger
 
 	UseConfigFile      bool
 	UseEnv             bool
@@ -53,6 +54,8 @@ type Command struct {
 	PersistentPostRunE func(cmd *Command, args []string) error
 }
 
+var noopLogger = log.New(io.Discard, "", 0)
+
 // NewCommand creates a new Command.
 func NewCommand(v *viper.Viper, fs afero.Fs) *Command {
 	return Wrap(&cobra.Command{}, v, fs)
@@ -64,6 +67,8 @@ func Wrap(cmd *cobra.Command, v *viper.Viper, fs afero.Fs) *Command {
 	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	cmd.SilenceUsage = true // don't show help content when error occurred
 	c := &Command{Command: cmd, viper: v, fs: fs}
+	c.D = noopLogger
+	c.V = noopLogger
 	c.UseDebugLogging = true
 	c.UseConfigFile = true
 	c.UseEnv = true
@@ -79,58 +84,38 @@ func (c *Command) Viper() *viper.Viper { return c.viper }
 
 // ExecuteContext is a wrapper around cobra.Command.ExecuteContext.
 func (c *Command) ExecuteContext(ctx context.Context) error {
-	c.WalkCommands(func(cmd *Command) {
-		cmd.delegateRunFuncs()
-		if c.AutomaticBindViper {
-			_ = cmd.BindFlags()
-		}
-	})
-	c.useDebugLogging()
-	c.useConfigFile()
-	c.useEnv()
+	c.onExecute()
 	return c.Command.ExecuteContext(ctx)
 }
 
 // Execute is a wrapper around cobra.Command.Execute.
 func (c *Command) Execute() error {
-	c.WalkCommands(func(cmd *Command) {
-		cmd.delegateRunFuncs()
-		if c.AutomaticBindViper {
-			_ = cmd.BindFlags()
-		}
-	})
-	c.useDebugLogging()
-	c.useConfigFile()
-	c.useEnv()
+	c.onExecute()
 	return c.Command.Execute()
 }
 
 // ExecuteContextC is a wrapper around cobra.Command.ExecuteContextC.
 func (c *Command) ExecuteContextC(ctx context.Context) (*cobra.Command, error) {
-	c.WalkCommands(func(cmd *Command) {
-		cmd.delegateRunFuncs()
-		if c.AutomaticBindViper {
-			_ = cmd.BindFlags()
-		}
-	})
-	c.useDebugLogging()
-	c.useConfigFile()
-	c.useEnv()
+	c.onExecute()
 	return c.Command.ExecuteContextC(ctx)
 }
 
 // ExecuteC is a wrapper around cobra.Command.ExecuteC.
 func (c *Command) ExecuteC() (cmd *cobra.Command, err error) {
+	c.onExecute()
+	return c.Command.ExecuteC()
+}
+
+func (c *Command) onExecute() {
 	c.WalkCommands(func(cmd *Command) {
+		cmd.useDebugLogging()
 		cmd.delegateRunFuncs()
 		if c.AutomaticBindViper {
 			_ = cmd.BindFlags()
 		}
 	})
-	c.useDebugLogging()
 	c.useConfigFile()
 	c.useEnv()
-	return c.Command.ExecuteC()
 }
 
 // delegateRunFuncs delegates the Run, PreRun, PostRun, and PersistentPreRun functions to those of cobra.Command.
@@ -191,40 +176,28 @@ func (c *Command) useDebugLogging() {
 		return
 	}
 
-	c.PersistentFlags().Bool("debug", false, "debug level output")
-	c.PersistentFlags().BoolP("verbose", "v", false, "verbose level output")
-	c.MarkFlagsMutuallyExclusive("debug", "verbose")
-	_ = c.BindPersistentFlag("debug")
-	_ = c.BindPersistentFlag("verbose")
+	rootCmd := c.Root()
+	if rootCmd.PersistentFlags().Lookup("debug") == nil {
+		rootCmd.PersistentFlags().Bool("debug", false, "debug level output")
+		_ = rootCmd.BindPersistentFlag("debug")
+	}
+	if rootCmd.PersistentFlags().Lookup("verbose") == nil {
+		rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose level output")
+		_ = rootCmd.BindPersistentFlag("verbose")
+	}
+	rootCmd.MarkFlagsMutuallyExclusive("debug", "verbose")
 
-	logger := zap.NewNop()
-	var restoreGlobal func()
 	cobra.OnInitialize(func() {
-		if c.viper.GetBool("debug") {
-			cfg := zap.NewProductionConfig()                    // human readable
-			cfg.Level = zap.NewAtomicLevelAt(zapcore.InfoLevel) // cobrax debug == zap info
-			cfg.DisableStacktrace = true
-			debugLogger, err := cfg.Build()
-			cobra.CheckErr(err)
-			logger = debugLogger
+		if c.viper.GetBool("debug") && c.D == noopLogger {
+			c.D = log.New(c.ErrOrStderr(), "", 0)
 		} else if c.viper.GetBool("verbose") {
-			cfg := zap.NewDevelopmentConfig() // json
-			cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-			cfg.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel) // cobrax verbose == zap debug
-			cfg.EncoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-				enc.AppendString(t.Local().Format("2006-01-02 15:04:05 MST"))
+			if c.D == noopLogger {
+				c.D = log.New(c.ErrOrStderr(), "[DEBUG]   ", log.Ldate|log.Ltime|log.Llongfile)
 			}
-			verboseLogger, err := cfg.Build()
-			cobra.CheckErr(err)
-			logger = verboseLogger
+			if c.V == noopLogger {
+				c.V = log.New(c.ErrOrStderr(), "[VERBOSE] ", log.Ldate|log.Ltime|log.Llongfile)
+			}
 		}
-
-		restoreGlobal = zap.ReplaceGlobals(logger)
-	})
-
-	cobra.OnFinalize(func() {
-		_ = logger.Sync()
-		restoreGlobal()
 	})
 }
 
@@ -259,8 +232,8 @@ func (c *Command) useConfigFile() {
 
 		// If a config file is found, read it in.
 		if err := c.viper.ReadInConfig(); err == nil {
-			zap.L().Info(fmt.Sprintf("Using config file: %s", c.viper.ConfigFileUsed()))
-			zap.L().Debug(fmt.Sprintf("%+v", c.viper.AllSettings()))
+			c.D.Printf("Using config file: %s", c.viper.ConfigFileUsed())
+			c.V.Printf("%+v", c.viper.AllSettings())
 		}
 	})
 }
@@ -442,20 +415,4 @@ func (c *Command) PrintOutln(i ...interface{}) {
 // PrintOutf is a convenience method to Printf to the defined output, fallback to Stdout if not set.
 func (c *Command) PrintOutf(format string, i ...interface{}) {
 	c.Print(fmt.Sprintf(format, i...))
-}
-
-func (c *Command) Debug(msg string) {
-	zap.L().Info(msg)
-}
-
-func (c *Command) Debugf(format string, i ...interface{}) {
-	zap.L().Info(fmt.Sprintf(format, i...))
-}
-
-func (c *Command) Verbose(msg string) {
-	zap.L().Debug(msg)
-}
-
-func (c *Command) Verbosef(format string, i ...interface{}) {
-	zap.L().Debug(fmt.Sprintf(format, i...))
 }
