@@ -336,10 +336,27 @@ func walkCommands(cmd *Command, fn func(*Command)) {
 // ReadFileOrStdIn returns io.ReadCloser.
 // If a file is specified, it is opened and returned. Otherwise, stdin is returned.
 // When a file is returned, it must be closed by the caller.
+//
+// Deprecated: Use OpenOrStdIn instead.
 func (c *Command) ReadFileOrStdIn(fileFlag string) (io.ReadCloser, error) {
 	file := c.viper.GetString(fileFlag)
 	if file != "" {
 		f, err := c.Fs().Open(file)
+		if err != nil {
+			return nil, err
+		}
+		return f, nil
+	} else {
+		return io.NopCloser(c.InOrStdin()), nil
+	}
+}
+
+// OpenOrStdIn returns io.ReadCloser.
+// If a filename is specified, it is opened and returned. Otherwise, stdin is returned.
+// When a file is returned, it must be closed by the caller.
+func (c *Command) OpenOrStdIn(filename string) (io.ReadCloser, error) {
+	if filename != "" {
+		f, err := c.Fs().Open(filename)
 		if err != nil {
 			return nil, err
 		}
