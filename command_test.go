@@ -3,7 +3,9 @@ package cobrax_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"os"
 	"testing"
 
 	"github.com/haijima/cobrax"
@@ -393,4 +395,75 @@ func TestCommand_BindNonInheritedFlags(t *testing.T) {
 	assert.Equal(t, "", child.Viper().GetString("pl"))
 	assert.Equal(t, "c", child.Viper().GetString("cp"))
 	assert.Equal(t, "d", child.Viper().GetString("cl"))
+}
+
+func Example() {
+	cmd := cobrax.NewCommand(viper.New(), afero.NewOsFs())
+	cmd.Use = "example"
+	cmd.Short = "Example command"
+	cmd.Long = "Example command with some flags"
+	cmd.Example = "example --foo a --bar b"
+	cmd.Run = func(cmd *cobrax.Command, args []string) {
+		fmt.Println("Hello world!")
+	}
+
+	cmd.PersistentFlags().String("foo", "bar", "Some flag")
+	cmd.PersistentFlags().String("bar", "baz", "Some other flag")
+
+	_ = cmd.Execute()
+	// Output:
+	// Hello world!
+}
+
+func ExampleNewCommand() {
+	cmd := cobrax.NewCommand(viper.New(), afero.NewOsFs())
+	cmd.Use = "example"
+	cmd.Run = func(cmd *cobrax.Command, args []string) {
+		fmt.Println("Hello world!")
+	}
+
+	_ = cmd.Execute()
+	// Output:
+	// Hello world!
+}
+
+func ExampleWrap() {
+	orig := &cobra.Command{
+		Use: "example",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("Hello world!")
+		},
+	}
+	cmd := cobrax.Wrap(orig, viper.New(), afero.NewOsFs())
+
+	_ = cmd.Execute()
+	// Output:
+	// Hello world!
+}
+
+func ExampleCommand_OpenOrStdIn() {
+	// Create a dummy file for example purposes
+	fs := afero.NewMemMapFs()
+	_, _ = fs.Create("file.txt")
+	_ = afero.WriteFile(fs, "file.txt", []byte("Hello world!"), 0644)
+
+	cmd := cobrax.NewCommand(viper.New(), fs)
+	cmd.Use = "example"
+	cmd.Run = func(cmd *cobrax.Command, args []string) {
+		file, err := cmd.OpenOrStdIn(cmd.Viper().GetString("file"))
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close() // file should be closed by the caller
+
+		_, _ = io.Copy(os.Stdout, file)
+	}
+
+	cmd.PersistentFlags().String("file", "", "file to read")
+	_ = cmd.BindPersistentFlag("file")
+
+	os.Args = []string{"example", "--file", "file.txt"}
+	_ = cmd.Execute()
+	// Output:
+	// Hello world!
 }

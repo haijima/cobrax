@@ -1,3 +1,8 @@
+// Package cobrax is a thin wrapper around library [github.com/spf13/cobra] that streamlines the integration of libraries [github.com/spf13/viper] and [github.com/spf13/afero].
+//
+// [github.com/spf13/cobra]: http://github.com/spf13/cobra
+// [github.com/spf13/viper]: http://github.com/spf13/viper
+// [github.com/spf13/afero]: http://github.com/spf13/afero
 package cobrax
 
 import (
@@ -17,6 +22,7 @@ import (
 
 // Command is a wrapper around cobra.Command that adds some additional functionality.
 type Command struct {
+	// Command is the underlying cobra.Command.
 	*cobra.Command
 	viper             *viper.Viper
 	fs                afero.Fs
@@ -24,7 +30,9 @@ type Command struct {
 	commands          []*Command
 	commandsAreSorted bool
 
+	// D is the debug logger. It is set to a noop logger by default.
 	D *log.Logger
+	// V is the verbose logger. It is set to a noop logger by default.
 	V *log.Logger
 
 	UseConfigFile      bool
@@ -266,7 +274,7 @@ func (c *Command) Commands() []*Command {
 	return c.commands
 }
 
-// AddCommand adds a command to the command.
+// AddCommand adds commands to the command.
 func (c *Command) AddCommand(commands ...*Command) {
 	for _, cmd := range commands {
 		c.Command.AddCommand(cmd.Command)
@@ -276,6 +284,7 @@ func (c *Command) AddCommand(commands ...*Command) {
 	}
 }
 
+// RemoveCommand removes commands from the command.
 func (c *Command) RemoveCommand(cmds ...*Command) {
 	for _, cmd := range cmds {
 		c.removeCommand(cmd)
@@ -294,6 +303,7 @@ func (c *Command) removeCommand(cmd *Command) {
 	}
 }
 
+// ResetCommands removes all commands from the command.
 func (c *Command) ResetCommands() {
 	c.parent = nil
 	c.commands = nil
@@ -301,6 +311,7 @@ func (c *Command) ResetCommands() {
 	c.Command.ResetCommands()
 }
 
+// Root returns the root command.
 func (c *Command) Root() *Command {
 	if c.parent == nil {
 		return c
@@ -308,6 +319,7 @@ func (c *Command) Root() *Command {
 	return c.parent.Root()
 }
 
+// WalkCommands walks and run the given function on all commands recursively.
 func (c *Command) WalkCommands(fn func(*Command)) {
 	root := c.Root()
 	fn(root)
