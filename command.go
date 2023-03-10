@@ -115,11 +115,11 @@ func (c *Command) ExecuteC() (cmd *cobra.Command, err error) {
 }
 
 func (c *Command) onExecute() {
+	executedCommand = c
 	c.WalkCommands(func(cmd *Command) {
-		cmd.useDebugLogging()
 		cmd.delegateRunFuncs()
-		if c.AutomaticBindViper {
-			_ = cmd.BindFlags()
+		if cmd.UseDebugLogging {
+			cmd.useDebugLogging()
 		}
 	})
 	c.useConfigFile()
