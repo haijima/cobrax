@@ -216,7 +216,7 @@ func (c *Command) useConfigFile() {
 
 	var cfgFile string
 	rootCmd := c.Root()
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $HOME/.%s.yaml)", rootCmd.Name()))
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $XDG_CONFIG_HOME/.%s.yaml)", rootCmd.Name()))
 
 	cobra.OnInitialize(func() {
 		if cfgFile != "" {
