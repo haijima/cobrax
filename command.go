@@ -75,6 +75,7 @@ func Wrap(cmd *cobra.Command, v *viper.Viper, fs afero.Fs) *Command {
 	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	cmd.SilenceUsage = true // don't show help content when error occurred
 	c := &Command{Command: cmd, viper: v, fs: fs}
+	v.SetFs(fs)
 	c.D = noopLogger
 	c.V = noopLogger
 	c.UseDebugLogging = true
