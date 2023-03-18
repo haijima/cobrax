@@ -329,6 +329,10 @@ func walkCommands(cmd *Command, fn func(*Command)) {
 	}
 }
 
+func (c *Command) Called() bool {
+	return c.CalledAs() != ""
+}
+
 // ReadFileOrStdIn returns io.ReadCloser.
 // If a file is specified, it is opened and returned. Otherwise, stdin is returned.
 // When a file is returned, it must be closed by the caller.
