@@ -1,12 +1,15 @@
 package cobrax
 
 import (
+	"bytes"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type Initializer func(*Command)
@@ -45,7 +48,7 @@ func init() {
 		}
 	})
 
-	OnInitialize(bindFlags, bindConfigFile, useDebugLogger, bindEnv)
+	OnInitialize(bindFlags, bindConfigFile, prioritizeNestedConfigValue, useDebugLogger, bindEnv)
 }
 
 // OnInitialize sets the passed functions to be run when each command's
@@ -90,6 +93,39 @@ func bindConfigFile(cmd *Command) {
 		cmd.D.Printf("Using config file: %s", cmd.viper.ConfigFileUsed())
 		cmd.V.Printf("%+v", cmd.viper.AllSettings())
 	}
+}
+
+// prioritizeNestedConfigValue overrides config values with those that have the subcommand prefix.
+func prioritizeNestedConfigValue(cmd *Command) {
+	if !cmd.Called() || !cmd.HasParent() {
+		return
+	}
+
+	filename := cmd.viper.ConfigFileUsed()
+	if filename == "" {
+		return
+	}
+	file, err := afero.ReadFile(cmd.Fs(), filename)
+	cobra.CheckErr(err)
+
+	configViper := viper.New()
+	configViper.SetConfigFile(filename)
+	err = configViper.ReadConfig(bytes.NewReader(file))
+	cobra.CheckErr(err)
+
+	prefix := strings.Join(strings.Split(cmd.CommandPath(), " ")[1:], ".") + "."
+	overrideMap := make(map[string]interface{})
+	for _, k := range configViper.AllKeys() {
+		if strings.HasPrefix(k, prefix) {
+			targetKey := strings.Replace(k, prefix, "", 1)
+			if strings.Contains(targetKey, ".") {
+				continue
+			}
+			overrideMap[targetKey] = configViper.Get(k)
+		}
+	}
+	err = cmd.viper.MergeConfigMap(overrideMap)
+	cobra.CheckErr(err)
 }
 
 func useDebugLogger(cmd *Command) {
