@@ -10,10 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
-	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -117,18 +114,12 @@ func (c *Command) ExecuteC() (cmd *cobra.Command, err error) {
 
 func (c *Command) onExecute() {
 	executedCommand = c
-	c.WalkCommands(func(cmd *Command) {
-		cmd.delegateRunFuncs()
-		if cmd.UseDebugLogging {
-			cmd.useDebugLogging()
-		}
-	})
-	c.useConfigFile()
-	c.useEnv()
+	c.addDefaultFlags()
+	c.WalkCommands(delegateRunFuncs)
 }
 
 // delegateRunFuncs delegates the Run, PreRun, PostRun, and PersistentPreRun functions to those of cobra.Command.
-func (c *Command) delegateRunFuncs() {
+func delegateRunFuncs(c *Command) {
 	if c.RunE != nil {
 		c.Command.RunE = func(cmd *cobra.Command, args []string) error {
 			return c.RunE(c, args)
@@ -180,82 +171,18 @@ func (c *Command) delegateRunFuncs() {
 	}
 }
 
-func (c *Command) useDebugLogging() {
-	if !c.UseDebugLogging {
-		return
-	}
-
+func (c *Command) addDefaultFlags() {
 	rootCmd := c.Root()
-	if rootCmd.PersistentFlags().Lookup("debug") == nil {
+	if c.UseDebugLogging {
 		rootCmd.PersistentFlags().Bool("debug", false, "debug level output")
-		_ = rootCmd.BindPersistentFlag("debug")
-	}
-	if rootCmd.PersistentFlags().Lookup("verbose") == nil {
 		rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose level output")
+		rootCmd.MarkFlagsMutuallyExclusive("debug", "verbose")
+		_ = rootCmd.BindPersistentFlag("debug")
 		_ = rootCmd.BindPersistentFlag("verbose")
 	}
-	rootCmd.MarkFlagsMutuallyExclusive("debug", "verbose")
-
-	cobra.OnInitialize(func() {
-		if c.viper.GetBool("debug") && c.D == noopLogger {
-			c.D = log.New(c.ErrOrStderr(), "", 0)
-		} else if c.viper.GetBool("verbose") {
-			if c.D == noopLogger {
-				c.D = log.New(c.ErrOrStderr(), "[DEBUG]   ", log.Ldate|log.Ltime|log.Llongfile)
-			}
-			if c.V == noopLogger {
-				c.V = log.New(c.ErrOrStderr(), "[VERBOSE] ", log.Ldate|log.Ltime|log.Llongfile)
-			}
-		}
-	})
-}
-
-func (c *Command) useConfigFile() {
-	if !c.UseConfigFile {
-		return
+	if c.UseConfigFile {
+		rootCmd.PersistentFlags().String("config", "", fmt.Sprintf("config file (default is $XDG_CONFIG_HOME/.%s.yaml)", rootCmd.Name()))
 	}
-
-	var cfgFile string
-	rootCmd := c.Root()
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("config file (default is $XDG_CONFIG_HOME/.%s.yaml)", rootCmd.Name()))
-
-	cobra.OnInitialize(func() {
-		if cfgFile != "" {
-			c.viper.SetConfigFile(cfgFile) // Use config file from the flag.
-		} else {
-			wd, err := os.Getwd()
-			cobra.CheckErr(err)
-			c.viper.AddConfigPath(wd) // adding current working directory as first search path
-			xdgConfig := os.Getenv("XDG_CONFIG_HOME")
-			if xdgConfig == "" {
-				home, err := os.UserHomeDir()
-				cobra.CheckErr(err)
-				xdgConfig = filepath.Join(home, ".config")
-			}
-			c.viper.AddConfigPath(filepath.Join(xdgConfig, rootCmd.Name())) // adding XDG config directory as second search path
-			home, err := os.UserHomeDir()
-			cobra.CheckErr(err)
-			c.viper.AddConfigPath(home) // adding home directory as third search path
-			c.viper.SetConfigName("." + rootCmd.Name())
-		}
-
-		// If a config file is found, read it in.
-		if err := c.viper.ReadInConfig(); err == nil {
-			c.D.Printf("Using config file: %s", c.viper.ConfigFileUsed())
-			c.V.Printf("%+v", c.viper.AllSettings())
-		}
-	})
-}
-
-func (c *Command) useEnv() {
-	if !c.UseEnv {
-		return
-	}
-
-	cobra.OnInitialize(func() {
-		c.viper.SetEnvPrefix(strings.ToUpper(c.Root().Name()))
-		c.viper.AutomaticEnv() // read in environment variables that match
-	})
 }
 
 // Commands returns a sorted slice of child commands.

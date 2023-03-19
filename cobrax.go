@@ -1,6 +1,11 @@
 package cobrax
 
 import (
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/spf13/cobra"
 )
 
@@ -32,23 +37,83 @@ func init() {
 		}
 
 		// Run initializers on all ancestors for the called command
-		for _, ancestor := range ancestryForCalledCommand(*root, nil) {
-			for _, initializer := range initializers {
+		ancestors := ancestryForCalledCommand(*root, nil)
+		for _, initializer := range initializers {
+			for _, ancestor := range ancestors {
 				initializer(&ancestor)
 			}
 		}
 	})
 
-	// bind flags to viper on cobrax.OnInitialize
-	OnInitialize(func(cmd *Command) {
-		if cmd.AutomaticBindViper {
-			cobra.CheckErr(cmd.BindFlags())
-		}
-	})
+	OnInitialize(bindFlags, bindConfigFile, useDebugLogger, bindEnv)
 }
 
 // OnInitialize sets the passed functions to be run when each command's
 // Execute method is called.
 func OnInitialize(y ...Initializer) {
 	initializers = append(initializers, y...)
+}
+
+func bindFlags(cmd *Command) {
+	if cmd.AutomaticBindViper {
+		cobra.CheckErr(cmd.BindFlags())
+	}
+}
+
+// bindConfigFile binds the config file to the command.
+func bindConfigFile(cmd *Command) {
+	if cmd.HasParent() || !cmd.UseConfigFile {
+		return
+	}
+
+	if cmd.Flag("config").Changed {
+		cmd.viper.SetConfigFile(cmd.Flag("config").Value.String()) // Use config file from the flag.
+	} else {
+		wd, err := os.Getwd()
+		cobra.CheckErr(err)
+		cmd.viper.AddConfigPath(wd) // adding current working directory as first search path
+		xdgConfig := os.Getenv("XDG_CONFIG_HOME")
+		if xdgConfig == "" {
+			home, err := os.UserHomeDir()
+			cobra.CheckErr(err)
+			xdgConfig = filepath.Join(home, ".config")
+		}
+		cmd.viper.AddConfigPath(filepath.Join(xdgConfig, cmd.Name())) // adding XDG config directory as second search path
+		home, err := os.UserHomeDir()
+		cobra.CheckErr(err)
+		cmd.viper.AddConfigPath(home) // adding home directory as third search path
+		cmd.viper.SetConfigName("." + cmd.Name())
+	}
+
+	// If a config file is found, read it in.
+	if err := cmd.viper.ReadInConfig(); err == nil {
+		cmd.D.Printf("Using config file: %s", cmd.viper.ConfigFileUsed())
+		cmd.V.Printf("%+v", cmd.viper.AllSettings())
+	}
+}
+
+func useDebugLogger(cmd *Command) {
+	if !cmd.UseDebugLogging {
+		return
+	}
+
+	if cmd.viper.GetBool("debug") && cmd.D == noopLogger {
+		cmd.D = log.New(cmd.ErrOrStderr(), "", 0)
+	} else if cmd.viper.GetBool("verbose") {
+		if cmd.D == noopLogger {
+			cmd.D = log.New(cmd.ErrOrStderr(), "[DEBUG]   ", log.Ldate|log.Ltime|log.Llongfile)
+		}
+		if cmd.V == noopLogger {
+			cmd.V = log.New(cmd.ErrOrStderr(), "[VERBOSE] ", log.Ldate|log.Ltime|log.Llongfile)
+		}
+	}
+}
+
+func bindEnv(cmd *Command) {
+	if cmd.HasParent() || !cmd.UseEnv {
+		return
+	}
+
+	cmd.viper.SetEnvPrefix(strings.ToUpper(cmd.Name()))
+	cmd.viper.AutomaticEnv() // read in environment variables that match
 }
