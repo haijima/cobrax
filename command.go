@@ -90,29 +90,29 @@ func (c *Command) Viper() *viper.Viper { return c.viper }
 
 // ExecuteContext is a wrapper around cobra.Command.ExecuteContext.
 func (c *Command) ExecuteContext(ctx context.Context) error {
-	c.onExecute()
+	c.PreExecute()
 	return c.Command.ExecuteContext(ctx)
 }
 
 // Execute is a wrapper around cobra.Command.Execute.
 func (c *Command) Execute() error {
-	c.onExecute()
+	c.PreExecute()
 	return c.Command.Execute()
 }
 
 // ExecuteContextC is a wrapper around cobra.Command.ExecuteContextC.
 func (c *Command) ExecuteContextC(ctx context.Context) (*cobra.Command, error) {
-	c.onExecute()
+	c.PreExecute()
 	return c.Command.ExecuteContextC(ctx)
 }
 
 // ExecuteC is a wrapper around cobra.Command.ExecuteC.
 func (c *Command) ExecuteC() (cmd *cobra.Command, err error) {
-	c.onExecute()
+	c.PreExecute()
 	return c.Command.ExecuteC()
 }
 
-func (c *Command) onExecute() {
+func (c *Command) PreExecute() {
 	executedCommand = c
 	c.addDefaultFlags()
 	c.WalkCommands(delegateRunFuncs)
