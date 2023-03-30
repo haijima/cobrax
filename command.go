@@ -175,7 +175,7 @@ func (c *Command) addDefaultFlags() {
 	rootCmd := c.Root()
 	if c.UseDebugLogging {
 		rootCmd.PersistentFlags().Bool("debug", false, "debug level output")
-		rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose level output")
+		rootCmd.PersistentFlags().BoolP("verbose", "V", false, "verbose level output")
 		rootCmd.MarkFlagsMutuallyExclusive("debug", "verbose")
 		_ = rootCmd.BindPersistentFlag("debug")
 		_ = rootCmd.BindPersistentFlag("verbose")

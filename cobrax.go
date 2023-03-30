@@ -133,9 +133,9 @@ func useDebugLogger(cmd *Command) {
 		return
 	}
 
-	if cmd.viper.GetBool("debug") && cmd.D == noopLogger {
-		cmd.D = log.New(cmd.ErrOrStderr(), "", 0)
-	} else if cmd.viper.GetBool("verbose") {
+	if cmd.viper.GetBool("verbose") && cmd.V == noopLogger {
+		cmd.V = log.New(cmd.ErrOrStderr(), "", 0)
+	} else if cmd.viper.GetBool("debug") {
 		if cmd.D == noopLogger {
 			cmd.D = log.New(cmd.ErrOrStderr(), "[DEBUG]   ", log.Ldate|log.Ltime|log.Llongfile)
 		}
