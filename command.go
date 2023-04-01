@@ -36,6 +36,7 @@ type Command struct {
 	UseEnv             bool
 	UseDebugLogging    bool
 	AutomaticBindViper bool
+	UseVersionFlag     bool
 
 	// PersistentPreRun: children of this command will inherit and execute.
 	PersistentPreRun func(cmd *Command, args []string)
@@ -71,6 +72,7 @@ func Wrap(cmd *cobra.Command, v *viper.Viper, fs afero.Fs) *Command {
 	cmd.CompletionOptions.HiddenDefaultCmd = true
 	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	cmd.SilenceUsage = true // don't show help content when error occurred
+	cmd.Version = version()
 	c := &Command{Command: cmd, viper: v, fs: fs}
 	v.SetFs(fs)
 	c.D = noopLogger
@@ -79,6 +81,7 @@ func Wrap(cmd *cobra.Command, v *viper.Viper, fs afero.Fs) *Command {
 	c.UseConfigFile = true
 	c.UseEnv = true
 	c.AutomaticBindViper = true
+	c.UseVersionFlag = true
 	return c
 }
 
@@ -182,6 +185,9 @@ func (c *Command) addDefaultFlags() {
 	}
 	if c.UseConfigFile {
 		rootCmd.PersistentFlags().String("config", "", fmt.Sprintf("config file (default is $XDG_CONFIG_HOME/.%s.yaml)", rootCmd.Name()))
+	}
+	if c.UseVersionFlag {
+		rootCmd.PersistentFlags().BoolP("version", "v", false, "Show the version of this command")
 	}
 }
 
