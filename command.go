@@ -37,6 +37,7 @@ type Command struct {
 	UseDebugLogging    bool
 	AutomaticBindViper bool
 	UseVersionFlag     bool
+	UseQuietFlag       bool
 
 	// PersistentPreRun: children of this command will inherit and execute.
 	PersistentPreRun func(cmd *Command, args []string)
@@ -82,6 +83,7 @@ func Wrap(cmd *cobra.Command, v *viper.Viper, fs afero.Fs) *Command {
 	c.UseEnv = true
 	c.AutomaticBindViper = true
 	c.UseVersionFlag = true
+	c.UseQuietFlag = true
 	return c
 }
 
@@ -188,6 +190,10 @@ func (c *Command) addDefaultFlags() {
 	}
 	if c.UseVersionFlag {
 		rootCmd.PersistentFlags().BoolP("version", "v", false, "Show the version of this command")
+	}
+	if c.UseQuietFlag {
+		rootCmd.PersistentFlags().BoolP("quiet", "q", false, "quiet output")
+		_ = rootCmd.BindPersistentFlag("quiet")
 	}
 }
 
