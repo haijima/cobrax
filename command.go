@@ -377,10 +377,10 @@ func (c *Command) PrintOut(i ...interface{}) {
 
 // PrintOutln is a convenience method to Println to the defined output, fallback to Stdout if not set.
 func (c *Command) PrintOutln(i ...interface{}) {
-	c.Print(fmt.Sprintln(i...))
+	c.PrintOut(fmt.Sprintln(i...))
 }
 
 // PrintOutf is a convenience method to Printf to the defined output, fallback to Stdout if not set.
 func (c *Command) PrintOutf(format string, i ...interface{}) {
-	c.Print(fmt.Sprintf(format, i...))
+	c.PrintOut(fmt.Sprintf(format, i...))
 }
