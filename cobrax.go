@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/adrg/xdg"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -75,16 +76,16 @@ func bindConfigFile(cmd *Command) {
 		wd, err := os.Getwd()
 		cobra.CheckErr(err)
 		cmd.viper.AddConfigPath(wd) // adding current working directory as first search path
-		xdgConfig := os.Getenv("XDG_CONFIG_HOME")
-		if xdgConfig == "" {
-			home, err := os.UserHomeDir()
-			cobra.CheckErr(err)
-			xdgConfig = filepath.Join(home, ".config")
-		}
-		cmd.viper.AddConfigPath(filepath.Join(xdgConfig, cmd.Name())) // adding XDG config directory as second search path
+
+		xdgConfig := filepath.Join(xdg.ConfigHome, cmd.Name())
+		_, err = os.Stat(xdgConfig)
+		cobra.CheckErr(err)
+		cmd.viper.AddConfigPath(xdgConfig) // adding XDG config directory as second search path
+
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
 		cmd.viper.AddConfigPath(home) // adding home directory as third search path
+
 		cmd.viper.SetConfigName("." + cmd.Name())
 	}
 
