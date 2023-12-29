@@ -4,40 +4,27 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/haijima/cobrax.svg)](https://pkg.go.dev/github.com/haijima/cobrax)
 [![Go report](https://goreportcard.com/badge/github.com/haijima/cobrax)](https://goreportcard.com/report/github.com/haijima/cobrax)
 
-A thin wrapper around library [spf13/cobra](http://github.com/spf13/cobra) that streamlines the integration of library [spf13/viper](http://github.com/spf13/viper) and [spf13/afero](http://github.com/spf13/afero).
+A utility library for [spf13/cobra](http://github.com/spf13/cobra), [spf13/viper](http://github.com/spf13/viper) and [spf13/afero](http://github.com/spf13/afero).
 
 ## Usage
 
 ```go
-package main
-
-import (
-	"fmt"
-	"os"
-
-	"github.com/haijima/cobrax"
-	"github.com/spf13/afero"
-	"github.com/spf13/viper"
-)
-
-func main() {
-	rootCmd := cobrax.NewCommand(viper.New(), afero.NewOsFs())
-	rootCmd.Use = "test-cli"
-	rootCmd.Short = "cobrax sample CLI"
-	rootCmd.Run = func(cmd *cobrax.Command, args []string) {
-		fmt.Println("test-cli called")
-	}
-
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+// Build as follows to set the version.
+// go build -ldflags '-X github.com/haijima/cobrax.Version=YOUR_VERSION'
+cmd := &cobra.Command{
+    Use: "app",
+	Version: cobrax.VersionFunc(),
 }
 ```
 
-## Installation
+```go
+filename := viper.GetString("filename")
+cobrax.OpenOrStdIn(filename, afero.NewOsFs(), cmd.InOrStdin()) // Open the file if exsits, otherwise return os.Stdin.
+```
 
-```shell
-go get github.com/haijima/cobrax@latest
+```go
+// Read the config file and set the values to the viper.
+cobrax.ReadConfigFile(v, cfg, true, cmd.Name())
 ```
 
 ## License
