@@ -3,13 +3,17 @@ package cobrax
 import (
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 // NewRoot returns the base command used when called without any subcommands
 func NewRoot(v *viper.Viper) *cobra.Command {
+	return NewRootWithOption(v, DefaultRootFlagOption)
+}
+
+// NewRootWithOption returns the base command used when called without any subcommands
+func NewRootWithOption(v *viper.Viper, option RootFlagOption) *cobra.Command {
 	rootCmd := &cobra.Command{}
 	rootCmd.Args = cobra.NoArgs
 	rootCmd.CompletionOptions.HiddenDefaultCmd = true
@@ -18,23 +22,54 @@ func NewRoot(v *viper.Viper) *cobra.Command {
 	rootCmd.SilenceErrors = true // Print error by own slog logger
 	rootCmd.Version = VersionFunc()
 
-	rootCmd.PersistentFlags().BoolP("version", "V", false, "Print version information and quit")
-	rootCmd.PersistentFlags().String("config", "", "config file (default is $XDG_CONFIG_HOME/.stool.yaml)")
-	rootCmd.PersistentFlags().Bool("no-color", false, "disable colorized output")
-	_ = v.BindPFlag("no-color", rootCmd.PersistentFlags().Lookup("no-color"))
-	rootCmd.PersistentFlags().CountP("verbose", "v", "More output per occurrence. (Use -vvvv or --verbose 4 for max verbosity)")
-	_ = v.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
-	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Silence all output")
-	_ = v.BindPFlag("quiet", rootCmd.PersistentFlags().Lookup("quiet"))
-	rootCmd.MarkFlagsMutuallyExclusive("verbose", "quiet")
+	if option.Version.Name != "" {
+		rootCmd.PersistentFlags().BoolP(option.Version.Name, option.Version.Shorthand, false, option.Version.Usage)
+	}
+	if option.Config.Name != "" {
+		rootCmd.PersistentFlags().StringP(option.Config.Name, option.Config.Shorthand, "", option.Config.Usage)
+	}
+	if option.NoColor.Name != "" {
+		rootCmd.PersistentFlags().BoolP(option.NoColor.Name, option.NoColor.Shorthand, false, option.NoColor.Usage)
+		_ = v.BindPFlag(option.NoColor.Name, rootCmd.PersistentFlags().Lookup(option.NoColor.Name))
+	}
+	if option.Verbose.Name != "" {
+		rootCmd.PersistentFlags().CountP(option.Verbose.Name, option.Verbose.Shorthand, option.Verbose.Usage)
+		_ = v.BindPFlag(option.Verbose.Name, rootCmd.PersistentFlags().Lookup(option.Verbose.Name))
+	}
+	if option.Quiet.Name != "" {
+		rootCmd.PersistentFlags().BoolP(option.Quiet.Name, option.Quiet.Shorthand, false, option.Quiet.Usage)
+		_ = v.BindPFlag(option.Quiet.Name, rootCmd.PersistentFlags().Lookup(option.Quiet.Name))
+	}
+	if option.Version.Name != "" && option.Quiet.Name != "" {
+		rootCmd.MarkFlagsMutuallyExclusive(option.Verbose.Name, option.Quiet.Name)
+	}
 
 	return rootCmd
 }
 
-func RootPersistentPreRunE(cmd *cobra.Command, v *viper.Viper, args []string) error {
-	// Colorize settings (Do before logger setup)
-	color.NoColor = color.NoColor || v.GetBool("no-color")
+type RootFlagOption struct {
+	Version FlagOption
+	Config  FlagOption
+	NoColor FlagOption
+	Verbose FlagOption
+	Quiet   FlagOption
+}
 
+type FlagOption struct {
+	Name      string
+	Shorthand string
+	Usage     string
+}
+
+var DefaultRootFlagOption = RootFlagOption{
+	Version: FlagOption{Name: "version", Shorthand: "V", Usage: "Print version information and quit"},
+	Config:  FlagOption{Name: "config", Shorthand: "", Usage: "config file"},
+	NoColor: FlagOption{Name: "no-color", Shorthand: "", Usage: "disable colorized output"},
+	Verbose: FlagOption{Name: "verbose", Shorthand: "v", Usage: "More output per occurrence. (Use -vvvv or --verbose 4 for max verbosity)"},
+	Quiet:   FlagOption{Name: "quiet", Shorthand: "q", Usage: "Silence all output"},
+}
+
+func RootPersistentPreRunE(cmd *cobra.Command, v *viper.Viper, _ []string) error {
 	// Read config file
 	if err := NewConfigBinder(cmd).Bind(v); err != nil {
 		return err
