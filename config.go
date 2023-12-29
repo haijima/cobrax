@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -58,7 +59,7 @@ func NewConfigBinderWithOption(cmd *cobra.Command, option ...ConfigOption) *Conf
 	return cb
 }
 
-func (b *ConfigBinder) Bind(v *viper.Viper) error {
+func (b *ConfigBinder) Bind(v *viper.Viper, fs afero.Fs) error {
 	configFile := b.configFile
 	if configFile == "" {
 		configFile = b.cmd.Flags().Lookup(b.configFlagName).Value.String()
@@ -71,8 +72,8 @@ func (b *ConfigBinder) Bind(v *viper.Viper) error {
 		logger.Info(fmt.Sprintf("using config file: %s", v.ConfigFileUsed()))
 		logger.Debug(DebugViper(v))
 	} else {
-		_, globalOk := tryReadInConfig(v, b.globalConfigFiles)
-		_, projectOk := tryReadInConfig(v, b.projectConfigFiles)
+		_, globalOk := tryReadInConfig(v, fs, b.globalConfigFiles)
+		_, projectOk := tryReadInConfig(v, fs, b.projectConfigFiles)
 		if globalOk && projectOk {
 			logger.Info("merge global and project config files")
 			logger.Debug(DebugViper(v))
@@ -81,7 +82,7 @@ func (b *ConfigBinder) Bind(v *viper.Viper) error {
 	return nil
 }
 
-func tryReadInConfig(v *viper.Viper, files []string) (*viper.Viper, bool) {
+func tryReadInConfig(v *viper.Viper, fs afero.Fs, files []string) (*viper.Viper, bool) {
 	logger.Info("attempting to read in config file")
 	for _, cf := range files {
 		cf, err := filepath.Abs(os.ExpandEnv(cf))
@@ -90,6 +91,7 @@ func tryReadInConfig(v *viper.Viper, files []string) (*viper.Viper, bool) {
 			continue
 		}
 		vv := viper.New()
+		vv.SetFs(fs)
 		vv.SetConfigFile(cf)
 		err = vv.ReadInConfig()
 		logger.Debug("reading file", "file", cf)
