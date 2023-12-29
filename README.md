@@ -24,7 +24,12 @@ cobrax.OpenOrStdIn(filename, afero.NewOsFs(), cmd.InOrStdin()) // Open the file 
 
 ```go
 // Read the config file and set the values to the viper.
-cobrax.ReadConfigFile(v, cfg, true, cmd.Name())
+cobrax.NewConfigBinder(cmd).Bind(v)
+```
+
+```go
+// Override config value by sub-command specific config.
+cobrax.OverrideBySubConfig(v, strings.ToLower(cmd.Name())
 ```
 
 ## License
