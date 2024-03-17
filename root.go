@@ -64,9 +64,9 @@ type FlagOption struct {
 
 var DefaultRootFlagOption = RootFlagOption{
 	Version: FlagOption{Name: "version", Shorthand: "V", Usage: "Print version information and quit"},
-	Config:  FlagOption{Name: "config", Shorthand: "", Usage: "config file"},
+	Config:  FlagOption{Name: "config", Shorthand: "", Usage: "configuration `filename`"},
 	NoColor: FlagOption{Name: "no-color", Shorthand: "", Usage: "disable colorized output"},
-	Verbose: FlagOption{Name: "verbose", Shorthand: "v", Usage: "More output per occurrence. (Use -vvvv or --verbose 4 for max verbosity)"},
+	Verbose: FlagOption{Name: "verbose", Shorthand: "v", Usage: "More output per occurrence. (e.g. -vvv)"},
 	Quiet:   FlagOption{Name: "quiet", Shorthand: "q", Usage: "Silence all output"},
 }
 
