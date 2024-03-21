@@ -1,17 +1,40 @@
 package cobrax
 
-import "runtime/debug"
+import (
+	"fmt"
+	"runtime/debug"
+)
 
-// Version is set in build step
-// go build -ldflags '-X github.com/haijima/cobrax.Version=YOUR_VERSION'
-var Version = ""
+// VersionFunc returns the version string.
+// https://goreleaser.com/cookbooks/using-main.version/
+func VersionFunc(version, commit, date string) string {
+	var goVersion string
+	if buildInfo, ok := debug.ReadBuildInfo(); ok {
+		if version == "" {
+			version = buildInfo.Main.Version
+		}
+		goVersion = buildInfo.GoVersion
 
-func VersionFunc() string {
-	if Version != "" {
-		return Version
+		for _, setting := range buildInfo.Settings {
+			if commit == "" && setting.Key == "vcs.revision" {
+				commit = setting.Value
+			} else if date == "" && setting.Key == "vcs.time" {
+				date = setting.Value
+			}
+		}
 	}
-	if buildInfo, ok := debug.ReadBuildInfo(); ok && buildInfo.Main.Version != "" {
-		return buildInfo.Main.Version
+	if version == "" {
+		version = "unknown"
 	}
-	return "(devel)"
+
+	versionString := version
+	if date != "" {
+		versionString += fmt.Sprintf(" (%s)", date)
+	}
+	if commit != "" {
+		versionString += fmt.Sprintf("\n%s", commit)
+	}
+	versionString += fmt.Sprintf("\nbuilt with %s", goVersion)
+	versionString += "\n\nhttps://github.com/haijima/gh-ignore/releases/"
+	return versionString
 }

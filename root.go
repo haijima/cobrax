@@ -21,7 +21,6 @@ func NewRootWithOption(v *viper.Viper, option RootFlagOption) *cobra.Command {
 	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	rootCmd.SilenceUsage = true  // don't show help content when error occurred
 	rootCmd.SilenceErrors = true // Print error by own slog logger
-	rootCmd.Version = VersionFunc()
 
 	if option.Version.Name != "" {
 		rootCmd.PersistentFlags().BoolP(option.Version.Name, option.Version.Shorthand, false, option.Version.Usage)
