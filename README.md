@@ -9,27 +9,27 @@ A utility library for [spf13/cobra](http://github.com/spf13/cobra), [spf13/viper
 ## Usage
 
 ```go
-// Build as follows to set the version.
-// go build -ldflags '-X github.com/haijima/cobrax.Version=YOUR_VERSION'
-cmd := &cobra.Command{
-    Use: "app",
-	Version: cobrax.VersionFunc(),
-}
+var version string // main.version
+
+cmd := cobrax.NewRoot(viper.New())
+cmd.Use = "app"
+cmd.Short = "description of app"
+cmd.Version = cobrax.VersionFunc(version, "", "")
+
+cmd.AddCommand(someCmd)
+cmd.AddCommand(otherCmd)
+
+cmd.Execute()
 ```
 
 ```go
-filename := viper.GetString("filename")
-cobrax.OpenOrStdIn(filename, afero.NewOsFs(), cmd.InOrStdin()) // Open the file if exsits, otherwise return os.Stdin.
+// Open the file. When pipe is used and the filename is empty, read from stdin.
+cobrax.OpenOrStdIn(viper.GetString("filename"), afero.NewOsFs()) 
 ```
 
 ```go
 // Read the config file and set the values to the viper.
 cobrax.NewConfigBinder(cmd).Bind(v)
-```
-
-```go
-// Override config value by sub-command specific config.
-cobrax.OverrideBySubConfig(v, strings.ToLower(cmd.Name())
 ```
 
 ## License
