@@ -40,7 +40,7 @@ func NewRootWithOption(v *viper.Viper, option RootFlagOption) *cobra.Command {
 		rootCmd.PersistentFlags().BoolP(option.Quiet.Name, option.Quiet.Shorthand, false, option.Quiet.Usage)
 		_ = v.BindPFlag(option.Quiet.Name, rootCmd.PersistentFlags().Lookup(option.Quiet.Name))
 	}
-	if option.Version.Name != "" && option.Quiet.Name != "" {
+	if option.Verbose.Name != "" && option.Quiet.Name != "" {
 		rootCmd.MarkFlagsMutuallyExclusive(option.Verbose.Name, option.Quiet.Name)
 	}
 
