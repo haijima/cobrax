@@ -4,7 +4,8 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/haijima/cobrax.svg)](https://pkg.go.dev/github.com/haijima/cobrax)
 [![Go report](https://goreportcard.com/badge/github.com/haijima/cobrax)](https://goreportcard.com/report/github.com/haijima/cobrax)
 
-A utility library for [spf13/cobra](http://github.com/spf13/cobra), [spf13/viper](http://github.com/spf13/viper) and [spf13/afero](http://github.com/spf13/afero).
+A utility library for [spf13/cobra](http://github.com/spf13/cobra), [spf13/viper](http://github.com/spf13/viper)
+and [spf13/afero](http://github.com/spf13/afero).
 
 ## Usage
 
@@ -29,7 +30,7 @@ cobrax.OpenOrStdIn(viper.GetString("filename"), afero.NewOsFs())
 
 ```go
 // Read the config file and set the values to the viper.
-cobrax.NewConfigBinder(cmd).Bind(v)
+cobrax.BindConfigs(v, "app")
 ```
 
 ## License

@@ -7,116 +7,89 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-type ConfigBinder struct {
-	cmd                *cobra.Command
-	configFlagName     string
-	configFile         string
-	globalConfigFiles  []string // File paths without extension
-	projectConfigFiles []string // File paths without extension
+type ConfigOptions struct {
+	configFile      string
+	subConfigKey    string
+	configFilePaths []string // File paths without extension
+	configFileExts  []string
+	mergeConfig     bool
 }
 
-func NewConfigBinder(cmd *cobra.Command) *ConfigBinder {
-	cb := &ConfigBinder{cmd: cmd}
-	cb.configFlagName = "config"
-	cb.configFile = ""
-	rootCmdName := strings.ToLower(cmd.Root().Name())
-
-	cb.globalConfigFiles = make([]string, 0, 8)
+func BindConfigs(v *viper.Viper, rootCmdName string, opts ...ConfigOption) error {
+	opt := &ConfigOptions{
+		configFilePaths: make([]string, 0, 12),
+		configFileExts:  []string{"json", "toml", "yaml", "yml"},
+		mergeConfig:     true,
+	}
+	rootCmdName = strings.ToLower(rootCmdName)
+	xdgConfigHome := "$HOME/.config"
 	if xdg, exists := os.LookupEnv("XDG_CONFIG_HOME"); exists {
-		cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("%s/%s/config.json", xdg, rootCmdName))
-		cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("%s/%s/config.toml", xdg, rootCmdName))
-		cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("%s/%s/config.yaml", xdg, rootCmdName))
-		cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("%s/%s/config.yml", xdg, rootCmdName))
-	} else {
-		cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("$HOME/.config/%s/config.json", rootCmdName))
-		cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("$HOME/.config/%s/config.toml", rootCmdName))
-		cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("$HOME/.config/%s/config.yaml", rootCmdName))
-		cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("$HOME/.config/%s/config.yml", rootCmdName))
+		xdgConfigHome = xdg
 	}
-	cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("$HOME/.%s.json", rootCmdName))
-	cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("$HOME/.%s.toml", rootCmdName))
-	cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("$HOME/.%s.yaml", rootCmdName))
-	cb.globalConfigFiles = append(cb.globalConfigFiles, fmt.Sprintf("$HOME/.%s.yml", rootCmdName))
-	cb.projectConfigFiles = []string{
-		fmt.Sprintf("./.%s.json", rootCmdName),
-		fmt.Sprintf("./.%s.toml", rootCmdName),
-		fmt.Sprintf("./.%s.yaml", rootCmdName),
-		fmt.Sprintf("./.%s.yml", rootCmdName),
-	}
-	return cb
-}
+	opt.configFilePaths = append(opt.configFilePaths,
+		fmt.Sprintf("%s/%s/config", xdgConfigHome, rootCmdName),
+		fmt.Sprintf("$HOME/.%s", rootCmdName),
+		fmt.Sprintf("./.%s", rootCmdName))
 
-func NewConfigBinderWithOption(cmd *cobra.Command, option ...ConfigOption) *ConfigBinder {
-	cb := NewConfigBinder(cmd)
-	for _, opt := range option {
-		cb = opt.apply(cb)
+	// apply options
+	for _, fn := range opts {
+		fn(opt)
 	}
-	return cb
-}
 
-func (b *ConfigBinder) Bind(v *viper.Viper, fs afero.Fs) error {
-	configFile := b.configFile
-	if configFile == "" {
-		configFile = b.cmd.Flags().Lookup(b.configFlagName).Value.String()
-	}
-	if configFile != "" {
-		v.SetConfigFile(configFile) // Use config file from the flag.
+	if opt.configFile != "" {
+		v.SetConfigFile(opt.configFile) // Use config file from the flag.
 		if err := v.ReadInConfig(); err != nil {
 			return err
 		}
 		logger.Info(fmt.Sprintf("using config file: %s", v.ConfigFileUsed()))
 		logger.Debug(DebugViper(v))
-	} else {
-		_, globalOk := tryReadInConfig(v, fs, b.globalConfigFiles)
-		_, projectOk := tryReadInConfig(v, fs, b.projectConfigFiles)
-		if globalOk && projectOk {
-			logger.Info("merge global and project config files")
-			logger.Debug(DebugViper(v))
-		}
+		return nil
 	}
-	return nil
+	return tryReadInConfig(v, opt)
 }
 
-func tryReadInConfig(v *viper.Viper, fs afero.Fs, files []string) (*viper.Viper, bool) {
+func tryReadInConfig(v *viper.Viper, opt *ConfigOptions) error {
 	logger.Info("attempting to read in config file")
-	for _, cf := range files {
-		cf, err := filepath.Abs(os.ExpandEnv(cf))
-		if err != nil {
-			logger.Debug(err.Error())
-			continue
-		}
-		vv := viper.New()
-		vv.SetFs(fs)
-		vv.SetConfigFile(cf)
-		err = vv.ReadInConfig()
-		logger.Debug("reading file", "file", cf)
-		if err == nil {
-			logger.Info(fmt.Sprintf("successfully loaded config file: %s", vv.ConfigFileUsed()))
-			logger.Debug(DebugViper(vv))
-			if err := v.MergeConfigMap(vv.AllSettings()); err != nil {
-				logger.Debug(err.Error())
-				return v, false
+	found := false
+	for _, cf := range opt.configFilePaths {
+		for _, ext := range opt.configFileExts {
+			cf, err := filepath.Abs(os.ExpandEnv(fmt.Sprintf("%s.%s", cf, ext)))
+			if err != nil {
+				return err
 			}
-			v.SetConfigFile(vv.ConfigFileUsed())
-			return v, true
+			v.SetConfigFile(cf)
+			logger.Debug("reading file", "file", cf)
+
+			if err = v.MergeInConfig(); err != nil {
+				return err
+			}
+			logger.Info(fmt.Sprintf("successfully loaded config file: %s", v.ConfigFileUsed()))
+			logger.Debug(DebugViper(v))
+			found = true
+
+			// Override sub-config
+			if opt.subConfigKey != "" {
+				if subConf := v.GetStringMap(opt.subConfigKey); subConf != nil && len(subConf) > 0 {
+					if err := v.MergeConfigMap(subConf); err != nil {
+						return err
+					}
+					v.Set(opt.subConfigKey, nil)
+					logger.Info(fmt.Sprintf("override sub-config: %s", opt.subConfigKey))
+					logger.Debug(DebugViper(v))
+				}
+			}
+
+			if !opt.mergeConfig {
+				return nil
+			}
 		}
 	}
-	logger.Debug("no config file found")
-	return v, false
-}
-
-func OverrideBySubConfig(v *viper.Viper, key string) error {
-	if subConf := v.GetStringMap(key); subConf != nil {
-		if err := v.MergeConfigMap(subConf); err != nil {
-			return err
-		}
-		logger.Info(fmt.Sprintf("override sub-config: %s", key))
-		logger.Debug(DebugViper(v))
+	if !found {
+		logger.Debug("no config file found")
 	}
 	return nil
 }
@@ -136,18 +109,15 @@ func sortConfigKey(a, b string) int {
 	if a == b {
 		return 0
 	}
-	ah, at, aok := strings.Cut(a, ".")
-	bh, bt, bok := strings.Cut(b, ".")
-	if aok == bok {
-		if ah == bh {
-			return sortConfigKey(at, bt)
-		} else if ah < bh {
-			return -1
-		} else {
-			return 1
+	aK, aV, aHasDot := strings.Cut(a, ".")
+	bK, bV, bHasDot := strings.Cut(b, ".")
+	if aHasDot == bHasDot {
+		if aK == bK {
+			return sortConfigKey(aV, bV)
 		}
+		return strings.Compare(aK, bK)
 	}
-	if aok {
+	if aHasDot {
 		return 1
 	} else {
 		return -1
@@ -156,42 +126,42 @@ func sortConfigKey(a, b string) int {
 
 // <editor-fold desc="ConfigOptions">
 
-type ConfigOption interface {
-	apply(*ConfigBinder) *ConfigBinder
+type ConfigOption func(*ConfigOptions)
+
+func WithConfigFileName(file string) ConfigOption {
+	return func(opt *ConfigOptions) {
+		opt.configFile = file
+	}
 }
 
-type configOptionFunc func(*ConfigBinder) *ConfigBinder
-
-func (fn configOptionFunc) apply(b *ConfigBinder) *ConfigBinder {
-	return fn(b)
+func WithConfigFileFlag(cmd *cobra.Command, flagName string) ConfigOption {
+	return func(opt *ConfigOptions) {
+		opt.configFile = cmd.Flag(flagName).Value.String()
+	}
 }
 
-func WithConfigFile(file string) ConfigOption {
-	return configOptionFunc(func(b *ConfigBinder) *ConfigBinder {
-		b.configFile = file
-		return b
-	})
+func WithConfigFilePaths(paths ...string) ConfigOption {
+	return func(opt *ConfigOptions) {
+		opt.configFilePaths = paths
+	}
 }
 
-func WithConfigFlagName(name string) ConfigOption {
-	return configOptionFunc(func(b *ConfigBinder) *ConfigBinder {
-		b.configFlagName = name
-		return b
-	})
+func WithOverrideBy(key string) ConfigOption {
+	return func(opt *ConfigOptions) {
+		opt.subConfigKey = strings.ToLower(key)
+	}
 }
 
-func WithGlobalConfigFiles(paths ...string) ConfigOption {
-	return configOptionFunc(func(b *ConfigBinder) *ConfigBinder {
-		b.globalConfigFiles = paths
-		return b
-	})
+func WithOverrideDisabled() ConfigOption {
+	return func(opt *ConfigOptions) {
+		opt.subConfigKey = ""
+	}
 }
 
-func WithProjectConfigFiles(paths ...string) ConfigOption {
-	return configOptionFunc(func(b *ConfigBinder) *ConfigBinder {
-		b.projectConfigFiles = paths
-		return b
-	})
+func WithMergeConfig(merge bool) ConfigOption {
+	return func(opt *ConfigOptions) {
+		opt.mergeConfig = merge
+	}
 }
 
 //</editor-fold>

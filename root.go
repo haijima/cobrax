@@ -1,8 +1,6 @@
 package cobrax
 
 import (
-	"strings"
-
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -69,21 +67,18 @@ var DefaultRootFlagOption = RootFlagOption{
 	Quiet:   FlagOption{Name: "quiet", Shorthand: "q", Usage: "Silence all output"},
 }
 
-func RootPersistentPreRunE(cmd *cobra.Command, v *viper.Viper, fs afero.Fs, _ []string) error {
+func RootPersistentPreRunE(cmd *cobra.Command, v *viper.Viper, _ afero.Fs, _ []string) error {
 	// Read config file
-	if err := NewConfigBinder(cmd).Bind(v, fs); err != nil {
-		return err
-	}
-	if err := OverrideBySubConfig(v, strings.ToLower(cmd.Name())); err != nil {
+	opts := []ConfigOption{WithConfigFileFlag(cmd, "config"), WithOverrideBy(cmd.Name())}
+	if err := BindConfigs(v, cmd.Root().Name(), opts...); err != nil {
 		return err
 	}
 	// Bind flags (flags of the command to be executed)
 	if err := v.BindPFlags(cmd.Flags()); err != nil {
 		return err
 	}
-	// Print config values
+
 	logger.Info("bind flags and config values")
 	logger.Debug(DebugViper(v))
-
 	return nil
 }
