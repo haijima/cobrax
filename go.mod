@@ -1,6 +1,6 @@
 module github.com/haijima/cobrax
 
-go 1.22.0
+go 1.22.2
 
 require (
 	github.com/spf13/afero v1.11.0
