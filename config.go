@@ -73,7 +73,7 @@ func tryReadInConfig(v *viper.Viper, opt *ConfigOptions) error {
 
 			// Override sub-config
 			if opt.subConfigKey != "" {
-				if subConf := v.GetStringMap(opt.subConfigKey); subConf != nil && len(subConf) > 0 {
+				if subConf := v.GetStringMap(opt.subConfigKey); len(subConf) > 0 {
 					if err := v.MergeConfigMap(subConf); err != nil {
 						return err
 					}
