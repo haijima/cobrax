@@ -59,13 +59,15 @@ func tryReadInConfig(v *viper.Viper, opt *ConfigOptions) error {
 		for _, ext := range opt.configFileExts {
 			cf, err := filepath.Abs(os.ExpandEnv(fmt.Sprintf("%s.%s", cf, ext)))
 			if err != nil {
-				return err
+				logger.Debug(err.Error())
+				continue
 			}
 			v.SetConfigFile(cf)
 			logger.Debug("reading file", "file", cf)
 
 			if err = v.MergeInConfig(); err != nil {
-				return err
+				logger.Debug(err.Error())
+				continue
 			}
 			logger.Info(fmt.Sprintf("successfully loaded config file: %s", v.ConfigFileUsed()))
 			logger.Debug(DebugViper(v))
