@@ -78,7 +78,7 @@ func RootPersistentPreRunE(cmd *cobra.Command, v *viper.Viper, _ afero.Fs, _ []s
 		return err
 	}
 
-	logger.Info("bind flags and config values")
+	logger.Debug("bind flags and config values")
 	logger.Debug(DebugViper(v))
 	return nil
 }

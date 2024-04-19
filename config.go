@@ -53,7 +53,7 @@ func BindConfigs(v *viper.Viper, rootCmdName string, opts ...ConfigOption) error
 }
 
 func tryReadInConfig(v *viper.Viper, opt *ConfigOptions) error {
-	logger.Info("attempting to read in config file")
+	logger.Debug("attempting to read in config file")
 	found := false
 	for _, cf := range opt.configFilePaths {
 		for _, ext := range opt.configFileExts {
@@ -63,8 +63,6 @@ func tryReadInConfig(v *viper.Viper, opt *ConfigOptions) error {
 				continue
 			}
 			v.SetConfigFile(cf)
-			logger.Debug("reading file", "file", cf)
-
 			if err = v.MergeInConfig(); err != nil {
 				logger.Debug(err.Error())
 				continue
@@ -80,7 +78,7 @@ func tryReadInConfig(v *viper.Viper, opt *ConfigOptions) error {
 						return err
 					}
 					v.Set(opt.subConfigKey, nil)
-					logger.Info(fmt.Sprintf("override sub-config: %s", opt.subConfigKey))
+					logger.Debug(fmt.Sprintf("override sub-config: %s", opt.subConfigKey))
 					logger.Debug(DebugViper(v))
 				}
 			}
