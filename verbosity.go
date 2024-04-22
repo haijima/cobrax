@@ -14,6 +14,5 @@ func VerbosityCount(v *viper.Viper) int {
 }
 
 func VerbosityLevel(v *viper.Viper) slog.Level {
-	i := VerbosityCount(v)
-	return slog.Level(8 - 4*i)
+	return slog.LevelError - slog.Level(4*VerbosityCount(v))
 }
