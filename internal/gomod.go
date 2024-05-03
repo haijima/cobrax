@@ -25,7 +25,7 @@ func NewModInfo() (*ModInfo, error) {
 		return nil, errors.Wrap(err, "failed to unmarshal current directory")
 	}
 	if modInfo.Path == "command-line-arguments" {
-		return nil, errors.New("Please run `go mod init <MODNAME>` before `cobra-cli init`")
+		return nil, errors.New("Please run `go mod init <MODNAME>` before `cobrax-cli init`")
 	}
 	return &modInfo, nil
 }
