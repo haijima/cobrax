@@ -1,0 +1,59 @@
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./main.go
+    binary: "{{"{{"}} .ProjectName {{"}}"}}"
+    flags:
+      - -trimpath
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - freebsd
+      - linux
+      - windows
+archives:
+  - name_template: "{{"{{"}} .ProjectName {{"}}"}}-{{"{{"}} .Os {{"}}"}}-{{"{{"}} .Arch {{"}}"}}"
+    format: binary
+    rlcp: true
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Performance Improvements"
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^refactor:'
+      - '^test:'
+      - '^chore:'
+      - '^build:'
+{{- if .UseHomebrew }}
+
+brews:
+  - repository:
+      owner: {{ .Homebrew.TapRepository.Owner }}
+      name: {{ .Homebrew.TapRepository.Repo }}
+      token: "{{"{{"}} .Env.PAT_FOR_HOMEBREW_TAP {{"}}"}}"
+    folder: Formula
+    description: "{{ .Homebrew.Description }}"
+    homepage: "{{"{{"}} .GitURL {{"}}"}}"
+	{{- if .UseMIT }}
+    license: "MIT"
+	{{- end }}
+{{- end }}

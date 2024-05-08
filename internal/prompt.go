@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/cockroachdb/errors"
@@ -41,6 +42,11 @@ func (p *prompter) prompt(w io.Writer) string {
 
 // Prompt shows simple prompt
 func Prompt(w io.Writer, message, defaultAnswer string) string {
+	return PromptWithValidate(w, message, defaultAnswer, func(input string) error { return nil })
+}
+
+// PromptWithValidate shows simple prompt with validation
+func PromptWithValidate(w io.Writer, message, defaultAnswer string, validate func(string) error) string {
 	msg := message
 	if defaultAnswer != "" {
 		msg += fmt.Sprintf(" [%s]", defaultAnswer)
@@ -48,8 +54,31 @@ func Prompt(w io.Writer, message, defaultAnswer string) string {
 	return (&prompter{
 		Message:  msg,
 		Default:  defaultAnswer,
-		Validate: func(input string) error { return nil },
+		Validate: validate,
 	}).prompt(w)
+}
+
+// PromptInt shows simple prompt for integer
+func PromptInt(w io.Writer, message string, defaultAnswer int) int {
+	return PromptIntWithValidate(w, message, defaultAnswer, func(int) error { return nil })
+}
+
+// PromptIntWithValidate shows simple prompt for integer with validation
+func PromptIntWithValidate(w io.Writer, message string, defaultAnswer int, validate func(int) error) int {
+	input := (&prompter{
+		Message: fmt.Sprintf("%s [%d]", message, defaultAnswer),
+		Default: fmt.Sprintf("%d", defaultAnswer),
+		Validate: func(input string) error {
+			if i, err := strconv.Atoi(input); err != nil {
+				return errors.New("Enter a number")
+			} else if err := validate(i); err != nil {
+				return err
+			}
+			return nil
+		},
+	}).prompt(w)
+	i, _ := strconv.Atoi(input)
+	return i
 }
 
 // Confirm shows a yes/no prompt

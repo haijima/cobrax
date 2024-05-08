@@ -1,0 +1,26 @@
+package cmd
+
+import (
+	"github.com/spf13/afero"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+// New{{ .CmdName | title }}Cmd represents the {{ .CmdName }} command
+func New{{ .CmdName | title }}Cmd(v *viper.Viper, fs afero.Fs) *cobra.Command {
+	cmd := &cobra.Command{}
+	cmd.Use = "{{ .CmdName }}"
+	cmd.Short = "Description for {{ .CmdName }} command"
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		return run{{ .CmdName | title }}(cmd, v, fs, args)
+	}
+
+	// You can add flags here
+	//cmd.Flags().StringP("name", "n", "", "name")
+
+	return cmd
+}
+
+func run{{ .CmdName | title }}(cmd *cobra.Command, v *viper.Viper, fs afero.Fs, args []string) error {
+	return nil
+}
