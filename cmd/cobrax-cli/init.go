@@ -105,7 +105,7 @@ func runInit(cmd *cobra.Command, v *viper.Viper, fs afero.Fs, args []string) err
 		}
 	}
 	if len(subcommands) == 0 {
-		if internal.Confirm(cmd.ErrOrStderr(), "Use subcommands?", false) {
+		if internal.PromptBool(cmd.ErrOrStderr(), "Use subcommands?", false) {
 			subCommandNames := internal.Prompt(cmd.ErrOrStderr(), "Subcommands (comma separated)", "")
 			for _, cmdName := range strings.Split(subCommandNames, ",") {
 				if cmdName == "" {
@@ -117,7 +117,7 @@ func runInit(cmd *cobra.Command, v *viper.Viper, fs afero.Fs, args []string) err
 	}
 	var year int
 	var author, email string
-	useMIT := internal.Confirm(cmd.ErrOrStderr(), "Use MIT license?", false)
+	useMIT := internal.PromptBool(cmd.ErrOrStderr(), "Use MIT license?", false)
 	if useMIT {
 		year = internal.PromptInt(cmd.ErrOrStderr(), "  Year for copyright", time.Now().Year())
 		userName, _ := gitConfig("user.name")
@@ -127,7 +127,7 @@ func runInit(cmd *cobra.Command, v *viper.Viper, fs afero.Fs, args []string) err
 	}
 	var brewTapOwner, brewTapRepo string
 	var brewDesc string
-	useHomebrew := internal.Confirm(cmd.ErrOrStderr(), "Use homebrew?", true)
+	useHomebrew := internal.PromptBool(cmd.ErrOrStderr(), "Use homebrew?", true)
 	if useHomebrew {
 		userName, _ := gitConfig("user.name")
 		brewTapOwner = internal.Prompt(cmd.ErrOrStderr(), "  Homebrew tap repository owner", userName)

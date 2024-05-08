@@ -81,8 +81,8 @@ func PromptIntWithValidate(w io.Writer, message string, defaultAnswer int, valid
 	return i
 }
 
-// Confirm shows a yes/no prompt
-func Confirm(w io.Writer, message string, defaultToYes bool) bool {
+// PromptBool shows a yes/no prompt
+func PromptBool(w io.Writer, message string, defaultToYes bool) bool {
 	confirm := "y/N"
 	if defaultToYes {
 		confirm = "Y/n"
