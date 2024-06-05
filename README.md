@@ -10,12 +10,12 @@ and [spf13/afero](http://github.com/spf13/afero).
 ## Usage
 
 ```go
-var version string // main.version
+var version, commit, date string // main.version, main.commit, main.date
 
 cmd := cobrax.NewRoot(viper.New())
 cmd.Use = "app"
 cmd.Short = "description of app"
-cmd.Version = cobrax.VersionFunc(version, "", "")
+cmd.Version = cobrax.VersionFunc(version, commit, date)
 
 cmd.AddCommand(someCmd)
 cmd.AddCommand(otherCmd)
