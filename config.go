@@ -47,6 +47,17 @@ func BindConfigs(v *viper.Viper, rootCmdName string, opts ...ConfigOption) error
 		}
 		logger.Info(fmt.Sprintf("using config file: %s", v.ConfigFileUsed()))
 		logger.Debug(DebugViper(v))
+		// Override sub-config
+		if opt.subConfigKey != "" {
+			if subConf := v.GetStringMap(opt.subConfigKey); len(subConf) > 0 {
+				if err := v.MergeConfigMap(subConf); err != nil {
+					return err
+				}
+				v.Set(opt.subConfigKey, nil)
+				logger.Info(fmt.Sprintf("override sub-config: %s", opt.subConfigKey))
+				logger.Debug(DebugViper(v))
+			}
+		}
 		return nil
 	}
 	return tryReadInConfig(v, opt)
