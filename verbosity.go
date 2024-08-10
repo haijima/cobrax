@@ -6,27 +6,41 @@ import (
 	"github.com/spf13/viper"
 )
 
-func VerbosityCount(v *viper.Viper) int {
-	if v.GetBool("quiet") {
+func verbosityCount(v *viper.Viper, verboseName, quietName string) int {
+	if v.GetBool(quietName) {
 		return -1
 	}
-	return v.GetInt("verbose")
+	return v.GetInt(verboseName)
 }
 
 func VerbosityLevel(v *viper.Viper, opts ...VerbosityLevelOption) slog.Level {
-	options := &VerbosityLevelOptions{zeroLevel: slog.LevelError, step: 4}
+	options := &VerbosityLevelOptions{verboseName: "verbose", quietName: "quiet", zeroLevel: slog.LevelError, step: 4}
 	for _, o := range opts {
 		o(options)
 	}
-	return options.zeroLevel - slog.Level(options.step*VerbosityCount(v))
+	return options.zeroLevel - slog.Level(options.step*verbosityCount(v, options.verboseName, options.quietName))
 }
 
 type VerbosityLevelOptions struct {
-	zeroLevel slog.Level
-	step      int
+	verboseName string
+	quietName   string
+	zeroLevel   slog.Level
+	step        int
 }
 
 type VerbosityLevelOption func(*VerbosityLevelOptions)
+
+func WithVerbosityName(verboseName string) VerbosityLevelOption {
+	return func(o *VerbosityLevelOptions) {
+		o.verboseName = verboseName
+	}
+}
+
+func WithQuietName(quietName string) VerbosityLevelOption {
+	return func(o *VerbosityLevelOptions) {
+		o.quietName = quietName
+	}
+}
 
 func WithVerbosityZeroLevel(level slog.Level) VerbosityLevelOption {
 	return func(o *VerbosityLevelOptions) {
