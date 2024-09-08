@@ -12,8 +12,8 @@ import (
 
 func GetFlags(cmd *cobra.Command) map[string]any {
 	m := make(map[string]any)
-	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		if f.Deprecated != "" || f.Hidden || f.Name == "help" {
+	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+		if f.Deprecated != "" || f.Hidden || f.Name == "help" || f.Name == "version" {
 			return
 		}
 		m[f.Name] = f.Value.String()
@@ -46,12 +46,9 @@ func PrintConfig(w io.Writer, m map[string]any, format PrintConfigFormat) error 
 	case TOML:
 		return toml.NewEncoder(w).Encode(m)
 	case JSON:
-		b, err := json.MarshalIndent(m, "", "  ")
-		if err != nil {
-			return err
-		}
-		_, err = w.Write(b)
-		return err
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		return enc.Encode(m)
 	}
 	return nil
 }
