@@ -52,3 +52,10 @@ func PrintConfig(w io.Writer, m map[string]any, format PrintConfigFormat) error 
 	}
 	return nil
 }
+
+func GenConfigRunE(format PrintConfigFormat) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		flags := GetFlags(cmd.Root())
+		return PrintConfig(cmd.OutOrStdout(), flags, YAML)
+	}
+}
