@@ -21,7 +21,7 @@ func NewRootWithOption(v *viper.Viper, option RootFlagOption) *cobra.Command {
 	rootCmd.SilenceErrors = true // Print error by own slog logger
 
 	if option.Version.Name != "" {
-		rootCmd.PersistentFlags().BoolP(option.Version.Name, option.Version.Shorthand, false, option.Version.Usage)
+		rootCmd.Flags().BoolP(option.Version.Name, option.Version.Shorthand, false, option.Version.Usage)
 	}
 	if option.Config.Name != "" {
 		rootCmd.PersistentFlags().StringP(option.Config.Name, option.Config.Shorthand, "", option.Config.Usage)
