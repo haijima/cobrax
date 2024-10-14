@@ -3,6 +3,7 @@ module github.com/haijima/cobrax
 go 1.22.2
 
 require (
+	github.com/BurntSushi/toml v1.2.1
 	github.com/cockroachdb/errors v1.11.1
 	github.com/fatih/color v1.16.0
 	github.com/mattn/go-colorable v0.1.13
@@ -13,6 +14,7 @@ require (
 	github.com/spf13/viper v1.18.2
 	golang.org/x/term v0.20.0
 	golang.org/x/text v0.15.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -39,5 +41,4 @@ require (
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
