@@ -35,6 +35,5 @@ func VersionFunc(version, commit, date string) string {
 		versionString += fmt.Sprintf("\n%s", commit)
 	}
 	versionString += fmt.Sprintf("\nbuilt with %s", goVersion)
-	versionString += "\n\nhttps://github.com/haijima/gh-ignore/releases/"
 	return versionString
 }
