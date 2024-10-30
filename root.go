@@ -20,9 +20,6 @@ func NewRootWithOption(v *viper.Viper, option RootFlagOption) *cobra.Command {
 	rootCmd.SilenceUsage = true  // don't show help content when error occurred
 	rootCmd.SilenceErrors = true // Print error by own slog logger
 
-	if option.Version.Name != "" {
-		rootCmd.Flags().BoolP(option.Version.Name, option.Version.Shorthand, false, option.Version.Usage)
-	}
 	if option.Config.Name != "" {
 		rootCmd.PersistentFlags().StringP(option.Config.Name, option.Config.Shorthand, "", option.Config.Usage)
 	}
@@ -46,7 +43,6 @@ func NewRootWithOption(v *viper.Viper, option RootFlagOption) *cobra.Command {
 }
 
 type RootFlagOption struct {
-	Version FlagOption
 	Config  FlagOption
 	NoColor FlagOption
 	Verbose FlagOption
@@ -60,7 +56,6 @@ type FlagOption struct {
 }
 
 var DefaultRootFlagOption = RootFlagOption{
-	Version: FlagOption{Name: "version", Shorthand: "V", Usage: "Print version information and quit"},
 	Config:  FlagOption{Name: "config", Shorthand: "", Usage: "configuration `filename`"},
 	NoColor: FlagOption{Name: "no-color", Shorthand: "", Usage: "disable colorized output"},
 	Verbose: FlagOption{Name: "verbose", Shorthand: "v", Usage: "More output per occurrence. (e.g. -vvv)"},
