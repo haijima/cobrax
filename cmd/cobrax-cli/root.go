@@ -15,7 +15,7 @@ func NewRootCmd(v *viper.Viper, fs afero.Fs) *cobra.Command {
 	rootCmd := cobrax.NewRoot(v)
 	rootCmd.Use = "cobrax-cli"
 	rootCmd.Short = "cobrax-cli is a simple command-line tool to create a CLI project with cobrax"
-	rootCmd.SetGlobalNormalizationFunc(cobrax.SnakeToKebab)
+	rootCmd.SetGlobalNormalizationFunc(cobrax.KebabToSnake)
 	rootCmd.Args = cobra.RangeArgs(0, 1)
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		// Colorization settings
